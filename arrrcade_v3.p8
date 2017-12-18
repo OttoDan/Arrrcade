@@ -11,15 +11,17 @@ __lua__
 --game loop
 function _init()
  debug = true
+ player_init()
  level:init()
  colgrid:init()
 end
 
-frame = 0
+
 function _update()
  
  colgrid:reset()
  objects:update()
+ player_update()
 
  
  --debug on off
@@ -53,6 +55,9 @@ function _draw()
    .."\nitm: "..#objects.items
    .."\npjt: "..#objects.projectiles
   )
+  print(tostr(player.grounded)
+  .."\nvy:"..player.vy
+  ,player.x,player.y)
  end
 end
 
@@ -63,7 +68,9 @@ nice to have: randomly arranged
 background segments
 
 --]]
-level = {}
+level = {
+ gravity = 0.25
+}
 
 
 function level:init()
@@ -74,7 +81,6 @@ function level:init()
  --create test player and block
  
  objects.blocks:create(64,16,obj_chest)
- objects.chars:create(32,24,obj_cade)
  --create random cannonballs
  for i=0,8 do
   objects.blocks:create(
@@ -187,66 +193,20 @@ function colgrid:draw()
 end
 
 
-function collision(obj)
- --upper left point
- local obj_x1 = flr(
-  (obj.x - obj.cw * 0.5)
-  / colgrid.size
- )
- local obj_y1 = flr(
-  (obj.y - obj.ch * 0.5)
-  / colgrid.size
- )
- --lower right point
- local obj_x2 = flr(
-  (obj.x + obj.cw * 0.5)
-  / colgrid.size
- )
- local obj_y2 = flr(
-  (obj.y + obj.ch * 0.5)
-  / colgrid.size
- )
- 
- --move left?
- if obj.vx < 0 and obj_x1 > 2 then
-  for iy = obj_y1, obj_y2 do
-   if iy>1 and iy < 128/colgrid.size-1
-   and colgrid[obj_x1][iy] then
-    return true
-   end
-  end
+function collision(obj,other)
+ if other.x+other.cw*0.5
+  > obj.x-obj.cw*0.5
+ and other.y+other.ch*0.5
+   > obj.y-obj.ch*0.5
+ and other.x-other.cw*0.5
+   < obj.x+obj.cw*0.5 
+ and other.y-other.ch*0.5
+   < obj.y+obj.ch*0.5
+ then
+   return true
+ else
+  return false
  end
- --move right?
- if obj.vx > 0 and obj_x2 < 128/colgrid.size-1 then
-  for iy = obj_y1, obj_y2 do
-   if iy>0 and iy < 128/colgrid.size
-   and colgrid[obj_x2][iy] then
-    return true
-   end
-  end
- end
- --move up?
- if obj.vy < 0 and obj_y1 > 2 then
-  for ix = obj_x1, obj_x2 do
-   if ix>1 and ix < 128/colgrid.size-1
-   and colgrid[ix][obj_y1] then
-    return true
-   end
-  end
- end
- --move down?
- if obj.vy > 0 and obj_y2 < 128/colgrid.size then
-  for ix = obj_x1, obj_x2 do
-   if ix>0 and ix < 128/colgrid.size
-   and colgrid[ix][obj_y2] then
-    return true
-   end
-  end
- end
-end
-
-function collisiongetoverlap(obj)
-  	
 end
 -------------------------------
 --objects
@@ -379,6 +339,7 @@ end
 function objects.chars:create(_x,_y,_t)
  local obj = objects:create(_x,_y,_t)
  add(objects.chars,obj)
+ return obj
 end
 
 function objects.blocks:create(_x,_y,_t)
@@ -395,8 +356,11 @@ function objects.blocks:create(_x,_y,_t)
  add(objects.blocks,obj)
 end
 
-
+frame = 0
 function objects:update()
+ frame += 1 
+ frame %= 16
+ 
  objects.chars:update()
  objects.blocks:update()
 end
@@ -414,55 +378,104 @@ end
 
 function objects.chars:update()
  for chr in all(objects.chars) do
-  --update collision grid
+  --ground if on bottom
+  if chr.y+chr.sh*0.5 > 124 then
+   chr.grounded = true
+   chr.vy = 0
+   chr.vx = 0
+  end
+  --debug: update collision grid
   colgrid:update(chr)
+  --not grounded (falling)
   if not chr.grounded then
    --save old position
    local old = {x=chr.x, y=chr.y}
-   
    --move by velocity
    chr.x += chr.vx
-   chr.y += chr.vy+1
+   --add gravity
+   chr.vy += level.gravity
+   --fall 
+   chr.y += chr.vy
    
-   --check for collision
-   if collision(chr) then
-    chr.x = chr.x
-    chr.y = chr.y
-    chr.grounded = true
+   --check for collision when falling
+   if chr.vy > 0 then
+    for k, v in pairs(objects) do
+     if type(v)=="table" then
+      for other in all(v) do
+       if collision(chr,other)
+       and other ~=chr then
+        other.grounded = false
+        chr.x = old.x
+        chr.y = old.y
+        chr.vy = 0
+        chr.grounded = true
+       end
+      end
+     end
+    end
+   end 
+  --grounded(not moving)
+  else
+   --recheck all 8 frames
+   if frame == 0 then
+    chr.grounded = false
    end
-  end
-  
-  --delete when out of screen
-  if objects:leftscreen(chr) then
-   del(objects.chars,chr)
+   --delete when out of screen
+   if objects:leftscreen(chr) then
+    del(objects.chars,chr)
+   end
   end
  end
 end
 
-frame = 0
 function objects.blocks:update()
  for blk in all(objects.blocks) do
-  --update collision grid
+  --ground if on bottom
+  if blk.y+blk.sh*0.5 > 124 then
+   blk.grounded = true
+  end
+  --debug: update collision grid
   colgrid:update(blk)
-  if not blk.grounded then
+  --not grounded (falling)
+  if blk.grounded == false then
    --save old position
    local old = {x=blk.x, y=blk.y}
    
    --move by velocity
    blk.x += blk.vx
-   blk.y += blk.vy+1
+   --add gravity
+   blk.vy += level.gravity
+   --fall 
+   blk.y += blk.vy
    
    --check for collision
-   if collision(blk) then
-    blk.x = old.x
-    blk.y = old.y
-    blk.grounded = true
-   end 
-  end
+   for k, v in pairs(objects) do
+    if type(v)=="table" then
+     for other in all(v) do
+      if collision(blk,other)
+      and other ~=blk then
+       --individual reactions
+       other.grounded = false
+       blk.x = old.x
+       blk.y = old.y
+       blk.vy = 0
+       blk.grounded = true
+      end
+     end
+    end
+   end
    
-  --delete when out of screen
-  if objects:leftscreen(blk) then
-   del(objects.blocks,blk)
+  --grounded(not moving)
+  else
+   --recheck all 8 frames
+   if frame == 0 and blk.t ~= obj_platform then
+    blk.grounded = false
+   end
+   
+   --delete when out of screen
+   if objects:leftscreen(blk) then
+    del(objects.blocks,blk)
+   end
   end
  end
 end
@@ -494,8 +507,48 @@ function objects:draw()
    end
   end
  end
+ --hardcode overdraw player sprite
+ sspr(
+     player.sx,
+     player.sy,
+     player.sw,
+     player.sh,
+     player.x - player.sw * 0.5,--upper left corner
+     player.y - player.sh * 0.5,--of the sprite
+     player.sw,
+     player.sh,
+     player.flip_x,
+     player.flip_y
+    )
 end
 -------------------------------
+--player (mirror of char 1)
+player = {}
+function player_init()
+ player = objects.chars:create(32,24,obj_cade) 
+end
+function player_update()
+ if btn(0) then
+  player.x -= 1
+  player.flip_x = true
+ end
+ if btn(1) then
+  player.x += 1
+  player.flip_x = false
+ end
+ if btnp(2) and player.grounded then
+  player.vy = -3.5
+  player.grounded = false
+  player.y-=3
+  --player.flip_x = true
+ end
+ if btnp(3) and player.grounded
+ and player.y+player.ch*0.5<122 then
+  player.grounded = false
+  player.y+=3
+  --player.flip_x = true
+ end
+end
 
 -------------------------------
 
