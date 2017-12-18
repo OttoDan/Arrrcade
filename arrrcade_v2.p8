@@ -137,20 +137,20 @@ end
 function colgrid:update(obj)
  --upper left point
  local obj_x1 = flr(
-  (obj.x + obj.cx - obj.cw * 0.5)
+  (obj.x - obj.cw * 0.5)
   / colgrid.size
  )
  local obj_y1 = flr(
-  (obj.y + obj.cy - obj.ch * 0.5)
+  (obj.y - obj.ch * 0.5)
   / colgrid.size
  )
  --lower right point
  local obj_x2 = flr(
-  (obj.x + obj.cx + obj.cw * 0.5)
+  (obj.x + obj.cw * 0.5)
   / colgrid.size
  )
  local obj_y2 = flr(
-  (obj.y + obj.cy + obj.ch * 0.5)
+  (obj.y + obj.ch * 0.5)
   / colgrid.size
  )
  
@@ -186,39 +186,63 @@ end
 function collision(obj)
  --upper left point
  local obj_x1 = flr(
-  (obj.x + obj.cx - obj.cw * 0.5)
+  (obj.x - obj.cw * 0.5)
   / colgrid.size
  )
  local obj_y1 = flr(
-  (obj.y + obj.cy - obj.ch * 0.5)
+  (obj.y - obj.ch * 0.5)
   / colgrid.size
  )
  --lower right point
  local obj_x2 = flr(
-  (obj.x + obj.cx + obj.cw * 0.5)
+  (obj.x + obj.cw * 0.5)
   / colgrid.size
  )
  local obj_y2 = flr(
-  (obj.y + obj.cy + obj.ch * 0.5)
+  (obj.y + obj.ch * 0.5)
   / colgrid.size
  )
  
  --move left?
- if obj.vx < 0 and obj_x1 > 1 then
+ if obj.vx < 0 and obj_x1 > 2 then
   for iy = obj_y1, obj_y2 do
-   if colgrid[obj_x1-1][iy] then
+   if iy>1 and iy < 128/colgrid.size-1
+   and colgrid[obj_x1-1][iy] then
     return true
    end
   end
  end
  --move right?
- if obj.vx > 0 and obj_x2 < 128/colgrid.size+1 then
+ if obj.vx > 0 and obj_x2 < 128/colgrid.size-1 then
   for iy = obj_y1, obj_y2 do
-   if colgrid[obj_x1+1][iy] then
+   if iy>0 and iy < 128/colgrid.size
+   and colgrid[obj_x2+1][iy] then
     return true
    end
   end
  end
+ --move up?
+ if obj.vy < 0 and obj_y1 > 2 then
+  for ix = obj_x1, obj_x2 do
+   if ix>1 and ix < 128/colgrid.size-1
+   and colgrid[ix][obj_y1-1] then
+    return true
+   end
+  end
+ end
+ --move down?
+ if obj.vy > 0 and obj_y1 < 128/colgrid.size-1 then
+  for ix = obj_x1, obj_x2 do
+   if ix>1 and ix < 128/colgrid.size-1
+   and colgrid[ix][obj_y1+1] then
+    return true
+   end
+  end
+ end
+end
+
+function collisiongetoverlap(obj)
+ 
 end
 -------------------------------
 --objects
@@ -265,8 +289,8 @@ obj_sw[obj_cade] = 16
 obj_sh[obj_cade] = 16
 obj_cx[obj_cade]  = 2
 obj_cy[obj_cade]  = 1
-obj_cw[obj_cade]  = 6
-obj_ch[obj_cade]  = 15
+obj_cw[obj_cade]  = 5
+obj_ch[obj_cade]  = 12
 --
 obj_barrel = 2
 obj_sx[obj_barrel]  = 16
@@ -286,7 +310,7 @@ obj_sh[obj_chest]  = 16
 obj_cx[obj_chest]  = 1
 obj_cy[obj_chest]  = 1
 obj_cw[obj_chest]  = 14
-obj_ch[obj_chest]  = 14
+obj_ch[obj_chest]  = 12
 --
 obj_platform = 5
 obj_sx[obj_platform]  = 8
@@ -296,7 +320,7 @@ obj_sh[obj_platform]  = 8
 obj_cx[obj_platform]  = 0
 obj_cy[obj_platform]  = 2
 obj_cw[obj_platform]  = 8
-obj_ch[obj_platform]  = 5
+obj_ch[obj_platform]  = 2
 --
 obj_cannonball = 6
 obj_sx[obj_cannonball]  = 16
@@ -305,8 +329,8 @@ obj_sw[obj_cannonball]  = 5
 obj_sh[obj_cannonball]  = 5
 obj_cx[obj_cannonball]  = 1
 obj_cy[obj_cannonball]  = 1
-obj_cw[obj_cannonball]  = 3
-obj_ch[obj_cannonball]  = 3
+obj_cw[obj_cannonball]  = 1
+obj_ch[obj_cannonball]  = 1
 
 
 -----------------------------
@@ -357,8 +381,8 @@ function objects.blocks:create(_x,_y,_t)
  local obj = objects:create(_x,_y,_t)
  --individual block data
  if _t ==obj_cannonball then
-  obj.vx = -rnd()+rnd()
-  obj.vy = 4 +rnd(4)
+  obj.vx = 1--flr(-rnd(1)+rnd(2))
+  obj.vy = 4--flr(4 +rnd(4))
  end
  --save to table
  add(objects.blocks,obj)
