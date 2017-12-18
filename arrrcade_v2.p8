@@ -10,6 +10,8 @@ __lua__
 -------------------------------
 --game loop
 function _init()
+ objects.blocks:create(64,32,obj_chest)
+ objects.chars:create(32,48,obj_cade)
 
 end
 
@@ -19,6 +21,16 @@ end
 
 function _draw()
  cls(4)
+ palt(0,false)--black -> opaque
+ palt(11,true)--green -> transparent
+ objects:draw()
+ --debug print
+ print("cpu: "..stat(1)
+  .."\nblc: "..#objects.blocks
+  .."\nchr: "..#objects.chars
+  .."\nitm: "..#objects.items
+  .."\npjt: "..#objects.projectiles
+ )
 end
 
 -------------------------------
@@ -69,7 +81,8 @@ objects={
 -- moving={}
  chars={},
  blocks={},
- items={}
+ items={},
+ projectiles={}
 }
 
 --template data
@@ -95,50 +108,67 @@ obj_sw[obj_chest]  = 16
 obj_sh[obj_chest]  = 16
 
 -----------------------------
-obj_template = {
- --identity/type
- t,
- --position
- x,y,
- --movement
- vx,vy,
- --collision
- grouded = false,
- --sprites
- sx,sy,--pixel position on sheet
- sw,sh,--pixel size (width&height)
-}
+--template for object creation
+function obj_template()
+ return {
+  --identity/type
+  t,
+  --position
+  x,y,
+  --movement
+  vx,vy,
+  --collision
+  grouded = false,
+  --sprites
+  sx,sy,--pixel position on sheet
+  sw,sh--pixel size (width&height)
+ }
+end
 
-function objects.blocks:create(_x,_y,_t)
- local obj = obj_template
+
+function objects:create(_x,_y,_t)
+ local obj = obj_template()
  obj.t = _t
  obj.x = _x
  obj.y = _y
- --get sprite data
+ --get sprite data for sspr
  obj.sx = obj_sx[_t]
  obj.sy = obj_sy[_t]
  obj.sw = obj_sw[_t]
  obj.sh = obj_sh[_t]
- 
+ return obj
+end
+
+function objects.chars:create(_x,_y,_t)
+ local obj = objects:create(_x,_y,_t)
+ add(objects.chars,obj)
+end
+function objects.blocks:create(_x,_y,_t)
+ local obj = objects:create(_x,_y,_t)
  add(objects.blocks,obj)
 end
 
+function objects:update()
+
+end
 
 function objects:draw()
- for i=1,3 do
-  for obj in all(objects[i]) do
-   sspr(
-    obj.sx,
-    obj.sy,
-    obj.sw,
-    obj.sh,
-    obj.x - obj.sw * 0.5,--upper left corner
-    obj.y - obj.sh * 0.5,--of the sprite
-    obj.sw,
-    obj.sh,
-    obj.flip_x,
-    obj.flip_y
-   )
+ for k, v in pairs(objects) do
+  if type(v)=="table" then
+   for obj in all(v) do
+    sspr(
+     obj.sx,
+     obj.sy,
+     obj.sw,
+     obj.sh,
+     obj.x - obj.sw * 0.5,--upper left corner
+     obj.y - obj.sh * 0.5,--of the sprite
+     obj.sw,
+     obj.sh,
+     obj.flip_x,
+     obj.flip_y
+    )
+   end
   end
  end
 end
