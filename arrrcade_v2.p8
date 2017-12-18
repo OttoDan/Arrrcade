@@ -32,6 +32,10 @@ level = {}
 collision in arrrcade works with
 objects in following sizes
 
+ 4x4
+ 8x8 8x16
+ 16x16 
+      
 all characters and objects have
 an individual hitbox.
 
@@ -47,16 +51,97 @@ character
 --[[
 there are 2 kinds of objects in 
 arrrcade: falling and static
-    
- barrels		->		blackpowder
- chests   ->  gold
- 
 
+falling objects become static
+objects and are destructible
+when destroyed they drop items
+or merge into smaller copies of 
+themselves
+       
+ barrels	 ->		blackpowder
+  \chests ->  gold
+   \ /   
+ broken wood
 
 --]]
-objects={}
---barrel
-objects[1] = 
+objects={
+-- static={},
+-- moving={}
+ chars={},
+ blocks={},
+ items={}
+}
+
+--template data
+obj_sx = {} obj_sy = {} 
+obj_sw = {} obj_sh = {}
+
+obj_cade = 1
+obj_sx[obj_cade] = 0
+obj_sy[obj_cade] = 0
+obj_sw[obj_cade] = 16
+obj_sh[obj_cade] = 16
+
+obj_barrel = 2
+obj_sx[obj_barrel]  = 16
+obj_sy[obj_barrel]  = 0
+obj_sw[obj_barrel]  = 16
+obj_sh[obj_barrel]  = 16
+
+obj_chest = 3
+obj_sx[obj_chest]  = 32
+obj_sy[obj_chest]  = 0
+obj_sw[obj_chest]  = 16
+obj_sh[obj_chest]  = 16
+
+-----------------------------
+obj_template = {
+ --identity/type
+ t,
+ --position
+ x,y,
+ --movement
+ vx,vy,
+ --collision
+ grouded = false,
+ --sprites
+ sx,sy,--pixel position on sheet
+ sw,sh,--pixel size (width&height)
+}
+
+function objects.blocks:create(_x,_y,_t)
+ local obj = obj_template
+ obj.t = _t
+ obj.x = _x
+ obj.y = _y
+ --get sprite data
+ obj.sx = obj_sx[_t]
+ obj.sy = obj_sy[_t]
+ obj.sw = obj_sw[_t]
+ obj.sh = obj_sh[_t]
+ 
+ add(objects.blocks,obj)
+end
+
+
+function objects:draw()
+ for i=1,3 do
+  for obj in all(objects[i]) do
+   sspr(
+    obj.sx,
+    obj.sy,
+    obj.sw,
+    obj.sh,
+    obj.x - obj.sw * 0.5,--upper left corner
+    obj.y - obj.sh * 0.5,--of the sprite
+    obj.sw,
+    obj.sh,
+    obj.flip_x,
+    obj.flip_y
+   )
+  end
+ end
+end
 -------------------------------
 
 -------------------------------
