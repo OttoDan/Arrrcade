@@ -48,7 +48,7 @@ function _draw()
  
  --debug....---
  if debug then
-  colgrid:draw()
+ -- colgrid:draw()
   print("cpu: "..stat(1)
    .."\nblc: "..#objects.blocks
    .."\nchr: "..#objects.chars
@@ -57,7 +57,8 @@ function _draw()
   )
   print(tostr(player.grounded)
   .."\nvy:"..player.vy
-  ,player.x,player.y)
+  .."\ny:"..player.y
+  ,player.x,player.y-20)
  end
 end
 
@@ -274,7 +275,17 @@ obj_sh[obj_chest]  = 16
 obj_cx[obj_chest]  = 1
 obj_cy[obj_chest]  = 1
 obj_cw[obj_chest]  = 14
-obj_ch[obj_chest]  = 12
+obj_ch[obj_chest]  = 15
+--
+obj_brokenwood = 4
+obj_sx[obj_brokenwood]  = 40
+obj_sy[obj_brokenwood]  = 0
+obj_sw[obj_brokenwood]  = 12
+obj_sh[obj_brokenwood]  = 8
+obj_cx[obj_brokenwood]  = 1
+obj_cy[obj_brokenwood]  = 1
+obj_cw[obj_brokenwood]  = 1
+obj_ch[obj_brokenwood] = 1
 --
 obj_platform = 5
 obj_sx[obj_platform]  = 8
@@ -311,6 +322,9 @@ function obj_template()
   grounded = false,
   cx,cy,
   cw,ch,
+  --
+  damage=false,
+  hp = 1,
   --sprites
   sx,sy,--pixel position on sheet
   sw,sh--pixel size (width&height)
@@ -354,6 +368,7 @@ function objects.blocks:create(_x,_y,_t)
  end
  --save to table
  add(objects.blocks,obj)
+ return obj
 end
 
 frame = 0
@@ -430,6 +445,35 @@ end
 
 function objects.blocks:update()
  for blk in all(objects.blocks) do
+  --test destroy a chest when hit by chest
+  if blk.damage then
+   if blk.t == obj_chest then
+    objects.blocks:create(
+     blk.x-blk.cw,
+     blk.y-blk.ch,
+    obj_brokenwood)
+    objects.blocks:create(
+     blk.x+blk.cw,
+     blk.y-blk.ch,
+    obj_brokenwood)
+    objects.blocks:create(
+     blk.x-blk.cw,
+     blk.y+blk.ch,
+    obj_brokenwood)
+    objects.blocks:create(
+     blk.x+blk.cw,
+     blk.y+blk.ch,
+    obj_brokenwood)
+    del(objects.blocks,blk)
+   end
+  end
+  --test count down for del
+  if blk.t==obj_brokenwood or (blk.t == obj_platform and blk.damage) then
+   blk.hp += 1
+   if blk.hp > 128 then
+    del(objects.blocks,blk)
+   end
+  end
   --ground if on bottom
   if blk.y+blk.sh*0.5 > 124 then
    blk.grounded = true
@@ -456,6 +500,7 @@ function objects.blocks:update()
       and other ~=blk then
        --individual reactions
        other.grounded = false
+       other.damage = true
        blk.x = old.x
        blk.y = old.y
        blk.vy = 0
@@ -503,6 +548,22 @@ function objects:draw()
      obj.x,
      obj.y,
      8)
+     pset( 
+     obj.x-obj.cw*0.5,
+     obj.y-obj.cw*0.5,
+     9)
+     pset( 
+     obj.x+obj.cw*0.5,
+     obj.y-obj.cw*0.5,
+     9)
+     pset( 
+     obj.x-obj.cw*0.5,
+     obj.y-obj.cw*0.5,
+     9)
+     pset( 
+     obj.x-obj.cw*0.5,
+     obj.y+obj.cw*0.5,
+     9)
     end
    end
   end
@@ -527,7 +588,15 @@ player = {}
 function player_init()
  player = objects.chars:create(32,24,obj_cade) 
 end
+pframe = 0
 function player_update()
+ pframe +=1 
+ pframe %= 64
+ if pframe == 0 then
+  --spawn object
+  pobj = 
+  objects.blocks:create(rnd(128),2,obj_chest)
+ end
  if btn(0) then
   player.x -= 1
   player.flip_x = true
@@ -536,17 +605,26 @@ function player_update()
   player.x += 1
   player.flip_x = false
  end
- if btnp(2) and player.grounded then
+ if btn(2) and player.grounded then
   player.vy = -3.5
   player.grounded = false
   player.y-=3
   --player.flip_x = true
  end
- if btnp(3) and player.grounded
+ --[[not working.. let fall
+ if btn(3) and player.grounded
  and player.y+player.ch*0.5<122 then
   player.grounded = false
   player.y+=3
   --player.flip_x = true
+ end
+ --]]
+ 
+ if btn(4) then
+  pobj.vx=-1
+ end
+ if btn(5) then 
+  pobj.vx=1
  end
 end
 
