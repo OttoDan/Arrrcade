@@ -990,10 +990,18 @@ player = {}
 playergun ={}
 function player_init()
  player = objects.chars:create(32,2,obj_cade) 
+ 
+ player.invobj = obj_sword
+ playersword = objects:create(player.x,player.y,obj_sword)
+ playersword.frames = { 
+		{0,0},--just hold it..
+		{0,1}--swing
+	}
+ 
  playergun = objects:create(player.x,player.y,obj_gun)
- player.weaponobj = obj_sword
+
  playergun.frames = { 
-		{0,0,0},--just hold it..
+		{0,0},--just hold it..
 		{0,1,2,3}--shoot
 	}
 	playergun.ffreq = 4
@@ -1104,11 +1112,15 @@ function player_update()
   and pobj.x < 120 then 
    pobj.x+=8
   end
-  
-  if btn(1) and pobj~=nil
-  and pobj.x < 120 then 
-   pobj.x+=8
+  --switch inventory item
+  if btnp(2) then 
+   if player.invobj == obj_gun then
+    player.invobj = obj_sword
+   elseif player.invobj == obj_sword then
+    player.invobj = obj_gun
+   end
   end
+  
   --throw tetris block down
   if btn(3) and pobj~=nil then
    pobj.vy = 4
@@ -1324,22 +1336,22 @@ function ui:draw()
  local oy = 0
  local osx = 8
  local osy = 8
- if player.weaponobj == obj_gun then
+ if player.invobj == obj_gun then
   ox = 2
-  oy = 2
+  oy = -2
   osx = 16
   osy = 16
- elseif player.weaponobj == obj_sword then
+ elseif player.invobj == obj_sword then
   ox = 2
   oy = 0
   osx = 24
   osy = 11
  end
  sspr(
-  obj_sx[player.weaponobj],
-  obj_sy[player.weaponobj],
-  obj_sw[player.weaponobj],
-  obj_sh[player.weaponobj],
+  obj_sx[player.invobj],
+  obj_sy[player.invobj],
+  obj_sw[player.invobj],
+  obj_sh[player.invobj],
   ui.x+ox,
   ui.y+oy,
   osx,osy
