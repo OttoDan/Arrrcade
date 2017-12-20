@@ -45,6 +45,10 @@ __lua__
  of characters
   should characters be able to
   stand on each others heads?
+
+--falling blocks controlled by
+  player (pobj) get stuck when 
+  falling and hitting on x axis
 --]]
 -------------------------------
 --game loop
@@ -229,15 +233,15 @@ obj_sh[obj_cade] = 16
 obj_cw[obj_cade]  = 5
 obj_ch[obj_cade]  = 12
 --
-obj_jack = 7
+obj_jack = 2
 obj_sx[obj_jack]  = 0
-obj_sy[obj_jack]  = 16
+obj_sy[obj_jack]  = 64
 obj_sw[obj_jack]  = 16
 obj_sh[obj_jack]  = 16
 obj_cw[obj_jack]  = 5
 obj_ch[obj_jack]  = 12
 --
-obj_dan = 8
+obj_dan = 3
 obj_sx[obj_dan]  = 32
 obj_sy[obj_dan]  = 16
 obj_sw[obj_dan]  = 16
@@ -245,7 +249,7 @@ obj_sh[obj_dan]  = 16
 obj_cw[obj_dan]  = 5
 obj_ch[obj_dan]  = 12
 --
-obj_barrel = 2
+obj_barrel = 4
 obj_sx[obj_barrel]  = 0
 obj_sy[obj_barrel]  = 32
 obj_sw[obj_barrel]  = 16
@@ -253,7 +257,7 @@ obj_sh[obj_barrel]  = 16
 obj_cw[obj_barrel]  = 12
 obj_ch[obj_barrel]  = 16
 --
-obj_chest = 3
+obj_chest = 5
 obj_sx[obj_chest]  = 0
 obj_sy[obj_chest]  = 48
 obj_sw[obj_chest]  = 16
@@ -261,7 +265,7 @@ obj_sh[obj_chest]  = 16
 obj_cw[obj_chest]  = 12
 obj_ch[obj_chest]  = 16
 --
-obj_brokenwood = 4
+obj_brokenwood = 6
 obj_sx[obj_brokenwood]  = 120
 obj_sy[obj_brokenwood]  = 0
 obj_sw[obj_brokenwood]  = 8
@@ -269,7 +273,7 @@ obj_sh[obj_brokenwood]  = 8
 obj_cw[obj_brokenwood]  = 1
 obj_ch[obj_brokenwood] = 1
 --
-obj_platform = 5
+obj_platform = 7
 obj_sx[obj_platform]  = 104
 obj_sy[obj_platform]  = 0
 obj_sw[obj_platform]  = 8
@@ -277,14 +281,21 @@ obj_sh[obj_platform]  = 8
 obj_cw[obj_platform]  = 8
 obj_ch[obj_platform]  = 2
 --
-obj_cannonball = 6
+obj_cannonball = 8
 obj_sx[obj_cannonball]  = 112
 obj_sy[obj_cannonball]  = 0
 obj_sw[obj_cannonball]  = 5
 obj_sh[obj_cannonball]  = 5
 obj_cw[obj_cannonball]  = 6
 obj_ch[obj_cannonball]  = 6
-
+--
+obj_gun = 9
+obj_sx[obj_gun]  = 0
+obj_sy[obj_gun]  = 16
+obj_sw[obj_gun]  = 16
+obj_sh[obj_gun]  = 16
+obj_cw[obj_gun]  = 0
+obj_ch[obj_gun]  = 0
 
 -----------------------------
 --template for object creation
@@ -347,13 +358,13 @@ function objects.chars:create(_x,_y,_t)
 		obj.hp = 100
  elseif _t == obj_jack then
   obj.frames = { 
-		 {0,0}, --1 = none
+		 {1,0}, --1 = attack
 		 {0,1}, --2 idle
-		 {0,5},  --3 jump up
-		 {0,3},  --4 jump down
-		 {0,4}  --5 walk 
+		 {2,3},  --3 jump up
+		 {3,4},  --4 jump down
+		 {1,2}  --5 walk 
 		}
-		obj.hp = 10
+		obj.hp = 3
  end
  add(objects.chars,obj)
  return obj
@@ -687,26 +698,39 @@ function objects:draw()
  end
  --hardcode overdraw player sprite
  sspr(
-     player.sx+player.frames[player.astate][player.findex]*player.sw,
-     player.sy,
-     player.sw,
-     player.sh,
-     player.x - player.sw * 0.5,--upper left corner
-     player.y - player.sh * 0.5,--of the sprite
-     player.sw,
-     player.sh,
-     player.flip_x,
-     player.flip_y
-    )
-    if debug then
-     rect(
-      player.x-player.cw*0.5,
-      player.y-player.ch * 0.5,
-      player.x+player.cw*0.5,
-      player.y+player.ch * 0.5,
-      7
-     )
-    end
+  player.sx+player.frames[player.astate][player.findex]*player.sw,
+  player.sy,
+  player.sw,
+  player.sh,
+  player.x - player.sw * 0.5,--upper left corner
+  player.y - player.sh * 0.5,--of the sprite
+  player.sw,
+  player.sh,
+  player.flip_x,
+  player.flip_y
+ )
+ --playergun
+ sspr(
+  playergun.sx+playergun.frames[playergun.astate][playergun.findex]*playergun.sw,
+  playergun.sy,
+  playergun.sw,
+  playergun.sh,
+  playergun.x - playergun.sw * 0.5,--upper left corner
+  playergun.y - playergun.sh * 0.5,--of the sprite
+  playergun.sw,
+  playergun.sh,
+  playergun.flip_x,
+  playergun.flip_y
+ )
+ if debug then
+  rect(
+   player.x-player.cw*0.5,
+   player.y-player.ch * 0.5,
+   player.x+player.cw*0.5,
+   player.y+player.ch * 0.5,
+   7
+  )
+ end
 end
 -------------------------------
 --explosion
@@ -724,12 +748,12 @@ function explosion:create(_x,_y)
 end
 function explosion:update()
  for exp in all(explosion) do
-  exp.cw +=0.25
-  exp.ch +=0.25 
+  exp.cw +=0.75
+  exp.ch +=0.75 
   exp.x-=0.01
   exp.y-=0.01
  
-  if exp.cw > 8 then
+  if exp.cw > 6 then
    --spread damage
    for k, v in pairs(objects) do
     if type(v)=="table" then
@@ -771,11 +795,41 @@ end
 -------------------------------
 --player (mirror of char 1)
 player = {}
+playergun ={}
 function player_init()
  player = objects.chars:create(32,2,obj_cade) 
+ playergun = objects:create(player.x,player.y,obj_gun)
+ playergun.frames = { 
+		{3,3,3},--just hold it..
+		{0,1,2}--shoot
+	}
+	playergun.ffreq = 8
 end
 pframe = 0
 function player_update()
+ --player gun---
+ playergun.flip_x = player.flip_x
+ 
+ local pgun_offset = 0
+ if playergun.flip_x then 
+  pgun_offset = -14
+ else
+  pgun_offset = 14
+ end
+
+ playergun.x = player.x+pgun_offset
+ playergun.y = player.y+2
+-- playergun.grounded = true
+ 
+ if (frame%playergun.ffreq == 0) then
+		playergun.findex += 1
+		if (playergun.findex > #playergun.frames[playergun.astate]) then
+			playergun.findex = 1
+			playergun.astate = 1
+		end
+	end
+	
+ 	
  --reset vel x
  player.vx = 0 
  --block drop
@@ -793,7 +847,8 @@ function player_update()
   if pobj~=nil and pobj.grounded == false 
   or pobj == nil then
    pobj = 
-   objects.blocks:create(rnd(128),2,nextobj)
+   --snapped spawn? flr((rnd(128))/8)*8,0
+   objects.blocks:create(flr((rnd(128))/8)*8,2,nextobj)
    pobj.vy = 1
   end
  end
@@ -802,15 +857,17 @@ function player_update()
   player.cooldown-= 1
  end
  --shoot with space
- if btn(1,1) then
+ if btn(5) then
   if player.cooldown<=0 then
    local _vx=0
    local _vy=0
    if btn(0) then
     _vx = -1
+    player.flip_x = true
    end
    if btn(1) then
     _vx = 1
+    player.flip_x = false
    end
    if btn(2) then
     _vy = -1
@@ -821,13 +878,29 @@ function player_update()
    
    player.vx += - _vx
    if _vx ~= 0 or _vy ~= 0 then
-    player.cooldown = 12
+    player.cooldown = 8
     objects.projectiles:create(
-     player.x,player.y,
+     playergun.x,playergun.y,
      _vx*4,_vy*4,
      obj_cannonball)
+    playergun.astate = 2
    end
   end
+ --move tetris blocks and swipe through inventory
+ elseif btn(4) then
+  
+  if btn(0) and pobj~=nil 
+  and pobj.x > 8 then
+   pobj.x-=8
+  end
+  if btn(1) and pobj~=nil
+  and pobj.x < 120 then 
+   pobj.x+=8
+  end
+  if btn(3) and pobj~=nil then
+   pobj.vy = 4
+   pobj = nil
+  end 
  --no violence? move then...
  else
   if btn(0) then
@@ -838,35 +911,23 @@ function player_update()
    player.vx = 1
    player.flip_x = false
   end
-  
-  if btn(2) and player.grounded then
+  --jump
+  if btn(2) 
+  and player.grounded then
    player.vy = -3.5
    player.grounded = false
    player.y-=3
    --player.flip_x = true
   end
-  if btn(3) and player.grounded 
+  --let fall (jump down)
+  if btn(3) 
+  and player.grounded 
   and player.groundobj ~= nil then
    player.letfall = true
    player.grounded = false
   -- player.vy = 1
   -- player.y+=2
   end
- end
- --[[not working.. let fall
- if btn(3) and player.grounded
- and player.y+player.ch*0.5<122 then
-  player.grounded = false
-  player.y+=3
-  --player.flip_x = true
- end
- --]]
- 
- if btnp(4) and pobj~=nil then
-  pobj.x-=8
- end
- if btnp(5) and pobj~=nil then 
-  pobj.x+=8
  end
 end
 function enemy_update(chr)
@@ -880,20 +941,31 @@ function enemy_update(chr)
  if chr.t == obj_jack then
   
   --get horizontal distance to player
-  if abs(player.x-chr.x) < 10 then
+  if abs(player.x-chr.x) < 8 then
    --close enough for melee?
-   if abs(player.y-chr.y) < 8 
-   --cooldown passed
-   and chr.cooldown <= 0 then
-    --player.hp -= 1
-    chr.astate = 2
-    player.damage = true
-    chr.cooldown = 24
-   --to high for melee? jump randomly
+   if abs(player.y-chr.y) < 8 then
+    --cooldown passed
+    if chr.cooldown <= 0 then
+     --player.hp -= 1
+     chr.astate = 1
+     player.damage = true
+     chr.cooldown = 24
+    --idle for cooldown
+    else
+     chr.astate = 2
+    end
+   --to high or low for melee?
    elseif chr.grounded then
-    chr.vy = -3.5
-    chr.y-=3
-    chr.grounded = false
+    --player above? -> jump
+    if player.y < chr.y then
+     chr.vy = -3.5
+     chr.y-=3
+     chr.grounded = false
+    --player below? -> fall 
+    elseif chr.groundobj ~= nil then
+     chr.letfall = true
+     chr.grounded = false
+    end
    end
   --not close enough .. get closer
   else
@@ -947,86 +1019,86 @@ bb110009900bbbbbbb1111d66d10bbbbb110009900bbbbbbb11b11d66d10bbbbbffb00099000bbbb
 bbff444b000bbbbbbb110009900bbbbbbff444b000bbbbbbbffb0009900bbbbbbbbbb444000bbbbbbbbb444bb00000bbbb9a999b899aa989bb56665b0000000b
 bbbbb44b000bbbbbbbffb44b000bbbbbbbbb44b000bbbbbbbbbbb44400bbbbbbbbbbbb4440bbbbbbbb9444bbbbbbbbbbb9bb99bbb889888bb566655b0100000b
 bbbbb99bb000bbbbbbbbb99bb000bbbbbbbb99bb000bbbbbbbbbbb99000bbbbbbbbbbbb0900bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb88bbbbb9b555b9b01110bb
-bbbbbbb05550bbbbbbbbbbb05550bbbbbbbbbbb05550bbbbbbbbbbb05550bbbbb6bbbbb05550bbbbb6bbbbb05550bbbbb00b00bbbb0000bbbbbbbbbbbbbbbbbb
-bbbbbb0555550bbbbbbbbb0555550bbbbbbbbb0555550bbbbbbbbb0555550bbbb66bbb0555550bbbb66bbb0555550bbb0e80880bb0aaa40bbbbbbbbbbbbbbbbb
-bbbbb055555550bbbbbbb055555550bbbbbbb055555550bbbbbbb055555550bbb66bb055555550bbb66bb055555550bb08e8820b0a999940bbbbbbbbbbbbbbbb
-b6bbb088558850bbbbbbb088558850bbb6bbb088558850bbb6bbb088558850bbb66bb088558850bbb66bb088558850bb0888820b0a9a9940bbbbbbbbbbbbbbbb
-b66bb008557850bbbbbbb078557850bbb66bb078557850bbb66bb008557850bbb66bb008557850bbb66bb008557850bbb08820bb0a9aa440bbbbbbbbbbbbbbbb
-b66bb055555550bbbbdbb055555550bbb66bb055555550bbb66bb055555550bbb66bb055555550bbb66bb055555550bbbb020bbb04994a40bbbbbbbbbbbbbbbb
-b66bbb05555509bbbbdbbb05555509bbb66bbb05555509bbb66bbb05555509bbbb66bb05555509b8bb66bb05555509b8bbb0bbbbb044440bbbbbbbbbbbbbbbbb
-b66bbb0505050bbbbdbbbb0505050bbbb66bbb0505050bbbb66bbb0505050bbbbb65bb0505050bb0bb65bb0505050bb0bbbbbbbbbb0000bbbbbbbbbbbbbbbbbb
-b66bbbbbbb050bbbbdbbbbbbbb050bbbb66bbbbbbb050bbbb66bbbbbbb050bbbbbb50bbbbb050b0bbbb50bbbbb050b0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb66bbb22211222bbdbdbbb22211222bbb66bbb22211222bbb66bbb22211222bbbb55bb02211220bbbb55bb02211220bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb65b0002211220bdbbdbbb02211220bbd65b0002211220bbb65b0002211220bbbbb500b221122bbbbbb500b221122bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb500bb221122b0dbbdbb0b221122b0dbb500bb221122b0bbb500bb221122b0bbbbbbbb221122bbbbbbbbbb221122bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb55bbbb11111b8dbbbd055b111118bdbb55bbbb11111b8bbb55bbbb11111b8bbbbbbbbb11111bbbbbbbbbbb11111bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbb5bbb0bbbb0bbdbb6655b0bbb00bbdbbb5bbb0bbbb0bbbbbb5bbb0bbbb0bbbbbbbbbb0bbbb0bbbbbbbbbb0bbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbb0bbbb0bb66666bbbb0bb0bbbdbdbbbbb0bbbb0bbbbbbbbbbb0bb0bbbbbbbbbbb00bbb00bbbbbbbbb00bbb00bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbb0bbbb0bb666bbbbbb0b0bbbbbbddbbbb0bbbb0bbbbbbbbbbb0b0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbb00000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb0044444400bbbbb44bb44bbbb4bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb004424222200bbb44bb55bbbbbb54bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb66bbbbbbbbbbbbbbbbbbb6bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b00555555555500b44b455bbbbbbb55bbbbbbbbbbbbbbbbbbbbbbbbbb9bbbbbbbbbbbb6bbbbabbbbbbbbbb666bb6bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b05555111111110bbbb55bbbbbbbbbbbbbbbbb66bbbbbbbbbbbbbbbb8bbbbbbbbbbbbbbb5bbbbbbbbbbbbbbb66bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0445245255425440bbb4bbbbb554bbbbbbbbbb6bbbbbbbbbb555555b589bbbbbb555555b8a9bbbbbb555555bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0452452442522540bbbbbbbbbb554bbbbbbbbbbbbbbbbbbbb065666b5aa77bbbb065666baa7b77bbb065666bb6b99b9bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0452452442542540bbbb54bbbbb554bbbbbbbbbbbbbbbbbbb0455bb589abbbbbb0455bb59aabbbbbb0455bbb66bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0452452442542540bbbb54bbbbbb54bbbbbb6bbbbbbb666bb44bbbbb589bbbbbb44bbbbb569bbbbbb44bbbb66bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0452452442542520bbbb45bbbbbbbbbbbb6bbbbbbbbb66bbb4bbbbbbbbbbbbbbb4bbbb6b9bbbbbbbb4bbbb66bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0452452442522510bbbb455bbbbbbbbbbbbbbbbbbbbbb5bbb0bbbbb9b9bbbbbbb0bbb66bbb9bbbbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0445245422525110bb44b455bbbbb44bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb666bbbbabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b05555551521210bbbb44bbbbb555bbb66b4455bb44b44b6bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b00115111212100bbbbb44bbb44bbb4b666b444455555466bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb002221221200bbbbbbb4bbbbbbbbbb5644444444b44466bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb0000000000bbbbbbbbbbbbbbbbbbb55b66444bb444b55bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb0000000000bbbbbbbbbb0ddd0bbbbbbbbbbb0ddd0bbbbbbbbbbb0ddd0bbbbbbbbbbb0ddd0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b00054444450000bbbbbbb0ddddd0bbbbbbbbb0ddddd0bbbbbbbbb0ddddd0bbbbbbbbb0ddddd0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0044544444450400bbb9b0ddddddd0bbbb9bb0ddddddd0bbb9bbb0ddddddd0bbbb9bb0ddddddd0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0444544444452440b9bbb088dd88d0bbbbbbb088dd88d0bbbbb9b088dd88d0bbb9b9b088dd88d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0444544444452440bb89b078dd78d0bbb98bb078dd78d0bbbb8bb078dd78d0bbbb8bb078dd78d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0444544444452440bb5bb00dddddd0bbbb59b00dddddd0bbb95bb00dddddd0bbbb5bb00dddddd0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0444044444252440bb5bbb0ddddd0bbbbb5bbb0ddddd0bbbbb5bbb0ddddd0bbbbb5bbb0ddddd0bb8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0424524442402420b000bb0d0d0d0bbbb000bb0d0d0d0bbbb000bb0d0d0d0bbbb000bb0d0d0d0bb8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0444044242452240b0000bbbbb0d0bbbb0000bbbbb0d0bbbb0000bbbbb0d0bbbb0000bbbbb0d0bb8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0242042424202210b000b0018dddd81bb000b0018dddd81bb000b0018dddd81bb000b0018dddd80bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0525021995101120bbbbbbbb11bbb10bbbbbbbbb11bbb10bbbbbbbbb11bbb10bbbbbbbbb11bbb11bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0000000990000000bbbbbbbb11dbd8b8bbbbbbbb11dbd88bbbbbbbbb11dbd8b8bbbbbbbb11dbd8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0222022991101110bbbbbbbbb1db88b8bbbbbbbbb1db88bbbbbbbbbbb1db88b8bbbbbbbbb1db88bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0222022222101110bbbbbbbb0bbbb0bbbbbbbbbb0bbbb0bbbbbbbbbb0bbbb0bbbbbbbbbb0bbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0911021111101190bbbbbbbb0bbbb0bbbbbbbbbbb0bb0bbbbbbbbbbb0bbbbb0bbbbbbbbb00bbb08bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-0000000000000000bbbbbbbb0bbbb8bbbbbbbbbbb0b8bbbbbbbbbbb0bbbbbbb8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb9bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00b00bbbb0000bbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0e80880bb0aaa40bbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbb66bbbbbbbbbbbbbbbbbbb6bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb08e8820b0a999940bbbbbbbbbbbbbbbb
+bbbbbbbb9bbbbbbbbbbbb6bbbbabbbbbbbbbb666bb6bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0888820b0a9a9940bbbbbbbbbbbbbbbb
+bbbbbbb8bbbbbbbbbbbbbbb5bbbbbbbbbbbbbbb66bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb08820bb0a9aa440bbbbbbbbbbbbbbbb
+555555b589bbbbbb555555b8a9bbbbbb555555bbbbbbbbbb555555bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb020bbb04994a40bbbbbbbbbbbbbbbb
+065666b5aa77bbbb065666baa7b77bbb065666bb6b99bbbb065666bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0bbbbb044440bbbbbbbbbbbbbbbbb
+0455bb589abbbbbb0455bb59aabbbbbb0455bbb66bbbbbbb0455bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0000bbbbbbbbbbbbbbbbbb
+44bbbbb589bbbbbb44bbbbb569bbbbbb44bbbb66bbbbbb9b44bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+4bbbbbbbbbbbbbbb4bbbb6b9bbbbbbbb4bbbb66bbbbbbbbb4bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0bbbbb9b9bbbbbbb0bbb66bbb9bbbbbb0bbbbbbbbbbbbbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbb666bbbbabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbb05550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbb055b550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbb05b555550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b6bbb088558b50bbbbbbbbbb5b55bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b66bb008557850bbbbbbbb5bbbb550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb6bb055555550bbb6bbbbbb5b8b50bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b66bbb055555095bbbbbb00bbb7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b6bb5b0505050bbbbbbbb05bb5b550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb6bbbb22211222bb6b6bb0b5555095bbbbbbbbbbb5b5bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb65b00b2211220bb6bb5bb5b5050bbbbbbbbbbb5bbbbb5bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-6bb500b0b2b122b0bbbbbbbbbbbbbb0bbbb6bbbbbb51bb5bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbb5bbbb111b1b8bb65b00b2211bbbbbbbbbbb01b1b78bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b6bbbb2b0bbb102b6bb500b0b2b122b0bbbbb2b05188b550bbbbbbbb651bb5bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbb0b1bb0bbbbbbbbbbb00bb0b8bbb5b5b512151152bbb60b01b157805bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbb0ddd0bbbbbbb9bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbb0ddddd0bbbb9bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbb9b0ddddddd0bbbb89bbb0ddd0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b9bbb088dd88d0bbbb5bbb0bddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb89b078dd78d0bbbb5bb0dbbdddb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb5bb00dddddd0bbbbb0b088dd88b0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bb5bbb0ddddd0bbbb00bb078bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b000bb0d0d0d0bbbb000b0bbddddd0bbb9bbbbbbbbb0b0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b0000bbbbb0d0bbbbbbbbb0dddd70bbbbb89bbbbbbbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-b000b0018dddd81bbbbbbb0d0d0d0b0bbbb0bbbdbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbb11bbb10bbbbbbbbbbb0d0bb8b00bbbbddb88d0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbb11dbd8b8bbbbb0b1bbddd0b8bbb0bb088bbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbb1db88b8bbbbbbbb11bbbbbbbbbbbb078d0d0b0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbb0bbbb0bbbbbbbdddbbdbd8bbbbbbbbbbbb0bbbb8bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbb0bbbb0bbbbbbbbbbb1db88bbbbbbb0b1bbd7d0b8bbbbb9bbdb8bdb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbb0bbbb8bbbbbbbbdb0bb0b0bbbbbbbbbb11bbbbbbbbb980d78b0d000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbb00000000bbbbbbbb00000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0044444400bbbbbb0044444400bbbbbb44bb44bbbb4bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb004424222200bbbbbb4424222200bbbb44bb55bbbbbb54bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb66bbbbbbbbbbbbbbbbbbb6bbbbbbbbbbbbbbbbbbb
+b00555555555500bb00bbb555555500bb44b455bbbbbbb55bbbbbbbbbbbbbbbbbbbbbbbbbb9bbbbbbbbbbbb6bbbbabbbbbbbbbb666bb6bbbbbbbbbbbbbbbbbbb
+b05555111111110bb05000111111110bbbbb55bbbbbbbbbbbbbbbbb66bbbbbbbbbbbbbbbb8bbbbbbbbbbbbbbb5bbbbbbbbbbbbbbb66bbbbbbbbbbbbbbbbbbbbb
+04452452554254400445240255425440bbbb4bbbbb554bbbbbbbbbb6bbbbbbbbbb555555b589bbbbbb555555b8a9bbbbbb555555bbbbbbbbbbbbbbbbbbbbbbbb
+04524524425225400452452442522540bbbbbbbbbbb554bbbbbbbbbbbbbbbbbbbb065666b5aa77bbbb065666baa7b77bbb065666bb6b99b9bbbbbbbbbbbbbbbb
+04524524425425400452452042542540bbbbb54bbbbb554bbbbbbbbbbbbbbbbbbb0455bb589abbbbbb0455bb59aabbbbbb0455bbb66bbbbbbbbbbbbbbbbbbbbb
+04524524425425400452452402542540bbbbb54bbbbbb54bbbbbb6bbbbbbb666bb44bbbbb589bbbbbb44bbbbb569bbbbbb44bbbb66bbbbbbbbbbbbbbbbbbbbbb
+04524524425425200452452442542520bbbbb45bbbbbbbbbbbb6bbbbbbbbb66bbb4bbbbbbbbbbbbbbb4bbbb6b9bbbbbbbb4bbbb66bbbbbbbbbbbbbbbbbbbbbbb
+04524524425225100452452442522510bbbbb455bbbbbbbbbbbbbbbbbbbbbb5bbb0bbbbb9b9bbbbbbb0bbb66bbb9bbbbbb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0445245422525110044524502250b110bbb44b455bbbbb44bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb666bbbbabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b05555551521210bb055555015200b0bbbbb44bbbbb555bbb66b4455bb44b44b6bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b00115111212100bb0011510121200bbbbbbb44bbb44bbb4b666b444455555466bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb002221221200bbbb00200b021200bbbbbbbb4bbbbbbbbbb5644444444b44466bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0000000000bbbbbb000bb00000bbbbbbbbbbbbbbbbbbbb55b66444bb444b55bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb0000000000bbbbbb0000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b00054444450000bb00054444450000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0044544444450400bb04544444450400bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0444544444452440bb00044444452400bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0444544444452440000bb0444445240bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+04445444444524400400b0444445240bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+044404444425244004440444442520bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+042452444240242004245244424000b0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+04440442424522400444044242450000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+02420424242022100242042424202210bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+05250219951011200525021995101120bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+00000009900000000000000990000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+02220229911011100200002991101110bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+0222022222101110020bb02222101110bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+091102111110119009bbb01111101190bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+000000000000000000bbb00000000000bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbb05550bbbbbbbbbbb05550bbbbbbbbbbb05550bbbbb6bbbbb05550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbb0555550bbbbbbbbb0555550bbbbbbbbb0555550bbbb66bbb0555550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbb055555550bbbbbbb055555550bbbbbbb055555550bbb66bb055555550bbbbbbbbbbb05550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbb088558850bbb6bbb088558850bbb6bbb088558850bbb66bb088558850bbbbbbbbbb055b550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbb078557850bbb66bb078557850bbb66bb008557850bbb66bb008557850bbbbbbbbb05b555550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bdbb055555550bbb66bb055555550bbb66bb055555550bbb66bb055555550bbbbb6bbb088558b50bbbbbbbbbb5b55bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bdbbb05555509bbb66bbb05555509bbb66bbb05555509bbbb66bb05555509b8bbb66bb008557850bbbbbbbb5bbbb550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+dbbbb0505050bbbb66bbb0505050bbbb66bbb0505050bbbbb65bb0505050bb0bbbb6bb055555550bbb6bbbbbb5b8b50bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+dbbbbbbbb050bbbb66bbbbbbb050bbbb66bbbbbbb050bbbbbb50bbbbb050b0bbbb66bbb055555095bbbbbb00bbb7bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+dbdbbb22211222bbb66bbb22211222bbb66bbb22211222bbbb55bb02211220bbbb6bb5b0505050bbbbbbbb05bb5b550bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbdbbb02211220bbd65b0002211220bbb65b0002211220bbbbb500b221122bbbbbb6bbbb22211222bb6b6bb0b5555095bbbbbbbbbbb5b5bbbbbbbbbbbbbbbbbb
+bbdbb0b221122b0dbb500bb221122b0bbb500bb221122b0bbbbbbbb221122bbbbbb65b00b2211220bb6bb5bb5b5050bbbbbbbbbbb5bbbbb5bbbbbbbbbbbbbbbb
+bbbd055b111118bdbb55bbbb11111b8bbb55bbbb11111b8bbbbbbbbb11111bbbb6bb500b0b2b122b0bbbbbbbbbbbbbb0bbbb6bbbbbb51bb5bbbbbbbbbbbbbbbb
+bb6655b0bbb00bbdbbb5bbb0bbbb0bbbbbb5bbb0bbbb0bbbbbbbbbb0bbbb0bbbbbbbb5bbbb111b1b8bb65b00b2211bbbbbbbbbbb01b1b78bbbbbbbbbbbbbbbbb
+6666bbbb0bb0bbbdbdbbbbb0bbbb0bbbbbbbbbbb0bb0bbbbbbbbbbb00bbb00bbbb6bbbb2b0bbb102b6bb500b0b2b122b0bbbbb2b05188b550bbbbbbbb651bb5b
+66bbbbbb0b0bbbbbbddbbbb0bbbb0bbbbbbbbbbb0b0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb0b1bb0bbbbbbbbbbb00bb0b8bbb5b5b512151152bbb60b01b157805
+bbbbbbb0ddd0bbbbbbbbbbb0ddd0bbbbbbbbbbb0ddd0bbbbbbbbbbb0ddd0bbbbbbbbbbbb0ddd0bbbbbbb9bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbb0ddddd0bbbbbbbbb0ddddd0bbbbbbbbb0ddddd0bbbbbbbbb0ddddd0bbbbbbbbbb0ddddd0bbbb9bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbb9b0ddddddd0bbbb9bb0ddddddd0bbb9bbb0ddddddd0bbbb9bb0ddddddd0bbbbbb9b0ddddddd0bbbb89bbb0ddd0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b9bbb088dd88d0bbbbbbb088dd88d0bbbbb9b088dd88d0bbb9b9b088dd88d0bbbb9bbb088dd88d0bbbb5bbb0bddddbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb89b078dd78d0bbb98bb078dd78d0bbbb8bb078dd78d0bbbb8bb078dd78d0bbbbb89b078dd78d0bbbb5bb0dbbdddb0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb5bb00dddddd0bbbb59b00dddddd0bbb95bb00dddddd0bbbb5bb00dddddd0bbbbb5bb00dddddd0bbbbb0b088dd88b0bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bb5bbb0ddddd0bbbbb5bbb0ddddd0bbbbb5bbb0ddddd0bbbbb5bbb0ddddd0bb8bbb5bbb0ddddd0bbbb00bb078bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+b000bb0d0d0d0bbbb000bb0d0d0d0bbbb000bb0d0d0d0bbbb000bb0d0d0d0bb8bb000bb0d0d0d0bbbb000b0bbddddd0bbb9bbbbbbbbb0b0bbbbbbbbbbbbbbbbb
+b0000bbbbb0d0bbbb0000bbbbb0d0bbbb0000bbbbb0d0bbbb0000bbbbb0d0bb8bb0000bbbbb0d0bbbbbbbbb0dddd70bbbbb89bbbbbbbbb0bbbbbbbbbbbbbbbbb
+b000b0018dddd81bb000b0018dddd81bb000b0018dddd81bb000b0018dddd80bbb000b0018dddd81bbbbbbb0d0d0d0b0bbbb0bbbdbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbb11bbb10bbbbbbbbb11bbb10bbbbbbbbb11bbb10bbbbbbbbb11bbb11bbbbbbbbbb11bbb10bbbbbbbbbbb0d0bb8b00bbbbddb88d0bbbbbbbbbbbbbbbbb
+bbbbbbbb11dbd8b8bbbbbbbb11dbd88bbbbbbbbb11dbd8b8bbbbbbbb11dbd8bbbbbbbbbbb11dbd8b8bbbbb0b1bbddd0b8bbb0bb088bbb0bbbbbbbbbbbbbbbbbb
+bbbbbbbbb1db88b8bbbbbbbbb1db88bbbbbbbbbbb1db88b8bbbbbbbbb1db88bbbbbbbbbbbb1db88b8bbbbbbbb11bbbbbbbbbbbb078d0d0b0bbbbbbbbbbbbbbbb
+bbbbbbbb0bbbb0bbbbbbbbbb0bbbb0bbbbbbbbbb0bbbb0bbbbbbbbbb0bbbb0bbbbbbbbbbb0bbbb0bbbbbbbdddbbdbd8bbbbbbbbbbbb0bbbb8bbbbbbbbbbbbbbb
+bbbbbbbb0bbbb0bbbbbbbbbbb0bb0bbbbbbbbbbb0bbbbb0bbbbbbbbb00bbb08bbbbbbbbbb0bbbb0bbbbbbbbbbb1db88bbbbbbb0b1bbd7d0b8bbbbb9bbdb8bdb0
+bbbbbbbb0bbbb8bbbbbbbbbbb0b8bbbbbbbbbbb0bbbbbbb8bbbbbbbbbbbbbbbbbbbbbbbbb0bbbb8bbbbbbbbdb0bb0b0bbbbbbbbbb11bbbbbbbbb980d78b0d000
 149414521442134214941442144214421442111111111442d494d452d442d342d494d442d442d442bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 144414521223344214441445122215421453555555553342d444d452d2233442d444d445d222d542bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 111114521111334211111445111115421553555555555332ddddd452dddd3342ddddd445d111d542bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
